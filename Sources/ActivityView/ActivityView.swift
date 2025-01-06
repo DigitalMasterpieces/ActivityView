@@ -72,9 +72,17 @@ private final class ActivityViewControllerWrapper: UIViewController {
                 controller.excludedActivityTypes = item.wrappedValue?.excludedTypes
                 controller.popoverPresentationController?.permittedArrowDirections = permittedArrowDirections
                 controller.popoverPresentationController?.sourceView = view
+                // ⚠️ We capture the controller inside of the completion handler,
+                //    otherwise it might happen, for some fast activities, that the controller
+                //    is dismissed and released before the completion handler could be called.
+                //    This in turn causes `self.item` to never be nilled,
+                //    which causes the share sheet to open again on next view refresh.
+                var capturedController: UIActivityViewController? = controller
                 controller.completionWithItemsHandler = { [weak self] (activityType, success, items, error) in
                     self?.item.wrappedValue = nil
                     self?.completion?(activityType, success, items, error)
+                    // Release the captured controller. The `if` is just here to suppress a "capturedController is never read" warning.
+                    if capturedController != nil { capturedController = nil }
                 }
                 present(controller, animated: true, completion: nil)
             }
